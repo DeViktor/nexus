@@ -9,7 +9,6 @@ import { useState, useTransition, type FC } from 'react';
 import { cn } from '@/lib/utils';
 import { usePathname, useRouter } from 'next/navigation';
 import { useUser, useAuth } from '@/firebase/provider';
-import { signOut } from 'firebase/auth';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -96,11 +95,11 @@ const NavLinks = ({ closeMenu }: { closeMenu?: () => void }) => {
       <NavigationMenu>
         <NavigationMenuList>
           <NavigationMenuItem>
-              <Link href="/courses" legacyBehavior passHref>
-                <NavigationMenuLink asChild>
-                    <a className={navigationMenuTriggerStyle()}>{t('courses')}</a>
-                </NavigationMenuLink>
+            <NavigationMenuLink asChild>
+              <Link href="/courses" className={navigationMenuTriggerStyle()}>
+                {t('courses')}
               </Link>
+            </NavigationMenuLink>
           </NavigationMenuItem>
           <NavigationMenuItem>
             <NavigationMenuTrigger>{t('vacancies')}</NavigationMenuTrigger>
@@ -133,19 +132,19 @@ const NavLinks = ({ closeMenu }: { closeMenu?: () => void }) => {
               </ul>
             </NavigationMenuContent>
           </NavigationMenuItem>
-           <NavigationMenuItem>
-             <Link href="/about" legacyBehavior passHref>
-                <NavigationMenuLink asChild>
-                    <a className={navigationMenuTriggerStyle()}>{t('about')}</a>
-                </NavigationMenuLink>
+          <NavigationMenuItem>
+            <NavigationMenuLink asChild>
+              <Link href="/about" className={navigationMenuTriggerStyle()}>
+                {t('about')}
               </Link>
+            </NavigationMenuLink>
           </NavigationMenuItem>
-           <NavigationMenuItem>
-             <Link href="/blog" legacyBehavior passHref>
-                <NavigationMenuLink asChild>
-                    <a className={navigationMenuTriggerStyle()}>{t('blog')}</a>
-                </NavigationMenuLink>
+          <NavigationMenuItem>
+            <NavigationMenuLink asChild>
+              <Link href="/blog" className={navigationMenuTriggerStyle()}>
+                {t('blog')}
               </Link>
+            </NavigationMenuLink>
           </NavigationMenuItem>
         </NavigationMenuList>
       </NavigationMenu>
@@ -160,7 +159,9 @@ export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   
   const handleLogout = async () => {
-    await signOut(auth);
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+    } catch {}
     router.push('/');
   };
 

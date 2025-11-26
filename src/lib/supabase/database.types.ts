@@ -19,6 +19,7 @@ export interface Database {
           avatar_url?: string
           bio?: string
           company?: string
+          password_hash?: string
         }
         Insert: {
           id?: string
@@ -29,6 +30,7 @@ export interface Database {
           avatar_url?: string
           bio?: string
           company?: string
+          password_hash?: string
         }
         Update: {
           id?: string
@@ -39,6 +41,7 @@ export interface Database {
           avatar_url?: string
           bio?: string
           company?: string
+          password_hash?: string
         }
       },
       vacancies: {
