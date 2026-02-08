@@ -1,11 +1,10 @@
 'use client';
-
-import { useUser, useStorage, useAuth } from '@/firebase';
 import { useForm, SubmitHandler, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useEffect, useState, useRef } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { Loader2, Wand2, PlusCircle, Trash2, Edit, User, Briefcase, GraduationCap, Award, Link as LinkIcon, FileText, Download, ArrowLeft, Save, KeyRound, Camera } from 'lucide-react';
 import { Loader2, Wand2, PlusCircle, Trash2, Edit, User, Briefcase, GraduationCap, Award, Link as LinkIcon, FileText, Download, ArrowLeft, Save, KeyRound, Camera } from 'lucide-react';
 import type { UserProfile } from '@/lib/types';
 import { Button } from '@/components/ui/button';
@@ -23,7 +22,6 @@ import { useRouter } from 'next/navigation';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { sendPasswordResetEmail } from 'firebase/auth';
 
 
 const fileToDataUri = (file: File) => new Promise<string>((resolve, reject) => {
@@ -66,7 +64,8 @@ const profileSchema = z.object({
 type ProfileFormValues = z.infer<typeof profileSchema>;
 
 export default function ProfilePage() {
-    const { user, isUserLoading } = useUser();
+    const [authUser, setAuthUser] = useState<{ id: string; email: string; user_metadata?: any } | null>(null);
+    const [isUserLoading, setIsUserLoading] = useState(true);
     const { toast } = useToast();
     const router = useRouter();
     const [isEditing, setIsEditing] = useState(false);
@@ -85,10 +84,26 @@ export default function ProfilePage() {
     });
 
     useEffect(() => {
+        const loadAuthUser = async () => {
+            try {
+                const { data } = await supabase.auth.getUser();
+                const u = data.user;
+                if (!u) {
+                    router.replace('/login');
+                    return;
+                }
+                setAuthUser({ id: u.id, email: u.email || '', user_metadata: u.user_metadata });
+            } finally {
+                setIsUserLoading(false);
+            }
+        };
+        loadAuthUser();
+    }, [router]);
+
+    useEffect(() => {
         const bootstrapProfile = async () => {
-            if (!isUserLoading && user) {
-                // Buscar perfil do Supabase
-                const existing = await getUserById(user.uid);
+            if (!isUserLoading && authUser) {
+                const existing = await getUserById(authUser.id);
                 if (existing) {
                     const profile = mapUserRowToUserProfile(existing);
                     setUserProfile(profile);
@@ -98,38 +113,37 @@ export default function ProfilePage() {
                         return;
                     }
                 } else {
-                    // Criar perfil básico no Supabase para o estudante
-                    const fullName = user.displayName || '';
-                    const created = await upsertUser({
-                        id: user.uid,
-                        email: user.email || '',
+                    const fullName = (authUser.user_metadata?.name as string) || '';
+                    await upsertUser({
+                        id: authUser.id,
+                        email: authUser.email || '',
                         name: fullName || 'Usuário',
                         role: 'student',
-                        avatar_url: user.photoURL || undefined,
+                        avatar_url: undefined,
                         created_at: new Date().toISOString(),
                     });
                     const profile: UserProfile = {
-                        id: user.uid,
-                        email: user.email || '',
+                        id: authUser.id,
+                        email: authUser.email || '',
                         firstName: fullName.split(' ')[0] || fullName || 'Usuário',
                         lastName: fullName.split(' ').slice(1).join(' ') || '',
                         userType: 'student',
-                        profilePictureUrl: user.photoURL || '',
+                        profilePictureUrl: '',
                     };
                     setUserProfile(profile);
                     setIsEditing(true);
                 }
-            } else if (!isUserLoading && !user) {
+            } else if (!isUserLoading && !authUser) {
                 router.replace('/login');
             }
             setIsProfileLoading(false);
         };
         bootstrapProfile();
-    }, [user, isUserLoading, router]);
+    }, [authUser, isUserLoading, router]);
 
     useEffect(() => {
         if (userProfile) {
-            const [firstName, ...lastNameParts] = user?.displayName?.split(' ') || ['', ''];
+            const [firstName, ...lastNameParts] = ((authUser?.user_metadata?.name as string) || '').split(' ') || ['', ''];
             form.reset({
                 firstName: userProfile.firstName || firstName || '',
                 lastName: userProfile.lastName || lastNameParts.join(' ') || '',
@@ -137,7 +151,7 @@ export default function ProfilePage() {
                 nationality: userProfile.nationality || '',
                 cidade: userProfile.cidade || '',
                 phoneNumber: userProfile.phoneNumber || '',
-                profilePictureUrl: userProfile.profilePictureUrl || user?.photoURL || '',
+                profilePictureUrl: userProfile.profilePictureUrl || '',
                 yearsOfExperience: userProfile.yearsOfExperience || 0,
                 functionalArea: userProfile.functionalArea || '',
                 skills: Array.isArray(userProfile.skills) ? userProfile.skills.join(', ') : '',
@@ -149,10 +163,10 @@ export default function ProfilePage() {
                 receivesJobAlerts: userProfile.receivesJobAlerts !== false,
             });
         }
-    }, [userProfile, form, user]);
+    }, [userProfile, form, authUser]);
 
     const onSubmit: SubmitHandler<ProfileFormValues> = async (data) => {
-        if (!user || !userProfile) {
+        if (!authUser || !userProfile) {
             toast({ variant: 'destructive', title: 'Erro', description: 'Utilizador não autenticado ou perfil não encontrado.' });
             return;
         }
@@ -300,7 +314,6 @@ function ProfileForm({ form, onSubmit, isSubmitting, onCancel }: { form: any; on
     const { toast } = useToast();
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [cvFile, setCvFile] = useState<File | null>(null);
-    const auth = useAuth();
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const getInitials = (firstName: string, lastName: string) => `${firstName[0] || ''}${lastName[0] || ''}`.toUpperCase();
@@ -351,13 +364,22 @@ function ProfileForm({ form, onSubmit, isSubmitting, onCancel }: { form: any; on
     };
 
     const handlePasswordReset = async () => {
-        if (auth.currentUser?.email) {
-            try {
-                await sendPasswordResetEmail(auth, auth.currentUser.email);
-                toast({ title: 'E-mail Enviado', description: 'Verifique a sua caixa de entrada para redefinir a palavra-passe.' });
-            } catch (error) {
-                toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível enviar o e-mail de redefinição.' });
+        try {
+            const { data } = await supabase.auth.getUser();
+            const email = data.user?.email;
+            if (!email) {
+                toast({ variant: 'destructive', title: 'Erro', description: 'E-mail do utilizador não encontrado.' });
+                return;
             }
+            const { error } = await supabase.auth.resetPasswordForEmail(email, {
+                redirectTo: window.location.origin + '/reset-password',
+            });
+            if (error) {
+                throw error;
+            }
+            toast({ title: 'E-mail Enviado', description: 'Verifique a sua caixa de entrada para redefinir a palavra-passe.' });
+        } catch {
+            toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível enviar o e-mail de redefinição.' });
         }
     };
     

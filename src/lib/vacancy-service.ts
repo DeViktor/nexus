@@ -1,16 +1,13 @@
 import { vacancies as initialJobs } from './vacancies';
 import type { JobPosting } from './types';
-import { Timestamp } from 'firebase/firestore';
 
 // In-memory store for jobs
 let jobs: JobPosting[] = [...initialJobs];
 
-const toDate = (date: Timestamp | Date | undefined): Date | null => {
+const toDate = (date: string | Date | undefined): Date | null => {
     if (!date) return null;
-    if (date instanceof Timestamp) {
-        return date.toDate();
-    }
-    return date;
+    if (typeof date === 'string') return new Date(date);
+    return date instanceof Date ? date : null;
 }
 
 // Function to get all jobs, with an option to include expired ones

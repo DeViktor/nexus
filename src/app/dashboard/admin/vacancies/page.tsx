@@ -1,8 +1,5 @@
 
 'use client';
-
-import { collection, query, orderBy, deleteDoc, doc } from 'firebase/firestore';
-import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -14,7 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { getVacancies, deleteVacancy } from '@/lib/vacancy-service';
-import { useEffect, useState } from 'react';
+import { getVacancies, deleteVacancy } from '@/lib/vacancy-service';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { GeneralReport } from "@/components/admin/general-report";
 
@@ -28,27 +25,34 @@ export default function ManageVacanciesPage() {
 
   useEffect(() => {
     try {
-      const allVacancies = getVacancies(true);
-      setVacancies(allVacancies);
-    } catch(e) {
-      if (e instanceof Error) {
-        setError(e);
+    const fetchVacancies = async () => {
+      setIsLoading(true);
+      try {
+        const allVacancies = await getVacancies(true);
+        setVacancies(allVacancies);
+      } catch (e) {
+        if (e instanceof Error) {
+          setError(e);
+        } else {
+          setError(new Error('Falha ao carregar vagas'));
+        }
+      } finally {
+        setIsLoading(false);
       }
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+    };
+    fetchVacancies();
 
   const handleDelete = async (vacancyId: string) => {
     if (!confirm('Tem a certeza que deseja excluir esta vaga? Esta ação não pode ser desfeita.')) return;
 
     try {
         deleteVacancy(vacancyId);
-        setVacancies(vacs => vacs.filter(v => v.id !== vacancyId));
+        await deleteVacancy(vacancyId);
         toast({
             title: 'Vaga Excluída!',
             description: 'A vaga foi removida com sucesso.',
         });
+    } catch (e) {
     } catch (e) {
         console.error(e);
         toast({

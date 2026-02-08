@@ -23,7 +23,6 @@ import { pt } from 'date-fns/locale';
 import { getVacancyById, updateVacancy } from '@/lib/vacancy-service';
 import type { Vacancy } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Timestamp } from 'firebase/firestore';
 
 const formSchema = z.object({
   title: z.string().min(5, { message: 'O título da vaga deve ter pelo menos 5 caracteres.' }),
@@ -84,7 +83,7 @@ export default function EditVacancyPage() {
         let closingDateValue: Date | undefined = undefined;
         if (vacancy.closingDate) {
             const date = vacancy.closingDate;
-            closingDateValue = date instanceof Timestamp ? date.toDate() : (typeof date === 'string' ? new Date(date) : (date instanceof Date ? date : undefined));
+            closingDateValue = typeof (date as any) === 'string' ? new Date(date as any) : (date instanceof Date ? date : undefined);
         }
 
         form.reset({

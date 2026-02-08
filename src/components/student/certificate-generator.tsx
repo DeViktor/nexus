@@ -4,10 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Download, Loader2 } from "lucide-react";
 import jsPDF from "jspdf";
 import 'jspdf-autotable';
-import { useUser } from "@/firebase";
 import { getCourseById } from "@/lib/course-service";
 import type { Course } from "@/lib/types";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 interface CertificateGeneratorProps {
   courseId: string;
@@ -35,10 +34,29 @@ const toBase64 = async (url: string) => {
 
 
 export function CertificateGenerator({ courseId, grade }: CertificateGeneratorProps) {
-  const { user } = useUser();
   const [isLoading, setIsLoading] = useState(false);
-  const studentName = user?.displayName || "Formando";
+  const [studentName, setStudentName] = useState<string>("Formando");
   const course = getCourseById(courseId);
+
+  useEffect(() => {
+    let active = true;
+    const loadSession = async () => {
+      try {
+        const res = await fetch('/api/auth/session');
+        const json = await res.json();
+        if (!active) return;
+        if (json?.ok && json?.user) {
+          setStudentName(json.user.displayName || json.user.email || "Formando");
+        } else {
+          setStudentName("Formando");
+        }
+      } catch {
+        if (active) setStudentName("Formando");
+      }
+    };
+    loadSession();
+    return () => { active = false; };
+  }, []);
 
   const generatePdf = async () => {
     if (!course) {

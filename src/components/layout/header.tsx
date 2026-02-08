@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Logo } from '@/components/shared/logo';
 import { Menu, X, LogOut, Globe, ChevronDown } from 'lucide-react';
-import { useState, useTransition, type FC } from 'react';
+import { useEffect, useState, useTransition, type FC } from 'react';
 import { cn } from '@/lib/utils';
 import { usePathname, useRouter } from 'next/navigation';
 import { useUser, useAuth } from '@/firebase/provider';
@@ -154,8 +154,8 @@ const NavLinks = ({ closeMenu }: { closeMenu?: () => void }) => {
 
 export function Header() {
   const router = useRouter();
-  const { user, isUserLoading } = useUser();
-  const auth = useAuth();
+  const [sessionUser, setSessionUser] = useState<any | null>(null);
+  const [isUserLoading, setIsUserLoading] = useState(true);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   
   const handleLogout = async () => {
@@ -171,6 +171,28 @@ export function Header() {
     const initials = names.map(n => n[0]).join('');
     return initials.slice(0, 2).toUpperCase();
   }
+
+  useEffect(() => {
+    let active = true;
+    const loadSession = async () => {
+      try {
+        const res = await fetch('/api/auth/session');
+        const json = await res.json();
+        if (!active) return;
+        if (json?.ok && json?.user) {
+          setSessionUser(json.user);
+        } else {
+          setSessionUser(null);
+        }
+      } catch {
+        if (active) setSessionUser(null);
+      } finally {
+        if (active) setIsUserLoading(false);
+      }
+    };
+    loadSession();
+    return () => { active = false; };
+  }, []);
 
   return (
     <header className="bg-card shadow-sm sticky top-0 z-40">
@@ -191,15 +213,15 @@ export function Header() {
 
             {isUserLoading ? (
               <Skeleton className="h-9 w-24 hidden md:block" />
-            ) : user ? (
+            ) : sessionUser ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="gap-2 hidden md:flex">
                      <Avatar className="h-8 w-8">
-                      <AvatarImage src={user.photoURL || undefined} />
-                      <AvatarFallback>{getInitials(user.displayName)}</AvatarFallback>
+                      <AvatarImage src={sessionUser.photoURL || undefined} />
+                      <AvatarFallback>{getInitials(sessionUser.displayName)}</AvatarFallback>
                     </Avatar>
-                    <span className='hidden sm:inline'>{user.displayName || user.email}</span>
+                    <span className='hidden sm:inline'>{sessionUser.displayName || sessionUser.email}</span>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
@@ -250,9 +272,9 @@ export function Header() {
             <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3 border-t">
                 {/* <NavLinks closeMenu={() => setIsMenuOpen(false)} /> */}
                <div className="pt-4 border-t">
-                {isUserLoading ? <div className='px-3'><Skeleton className='h-10 w-full'/></div> : user ? (
+                {isUserLoading ? <div className='px-3'><Skeleton className='h-10 w-full'/></div> : sessionUser ? (
                    <div className="space-y-2 px-3">
-                     <p className="font-medium">{user.displayName || user.email}</p>
+                     <p className="font-medium">{sessionUser.displayName || sessionUser.email}</p>
                      <Button variant="outline" className="w-full" asChild onClick={() => setIsMenuOpen(false)}><Link href="/dashboard">Painel</Link></Button>
                      <Button variant="destructive" className="w-full" onClick={handleLogout}>Sair</Button>
                    </div>

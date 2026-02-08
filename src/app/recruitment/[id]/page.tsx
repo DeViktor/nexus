@@ -9,7 +9,6 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
-import { useUser } from "@/firebase";
 import { useToast } from "@/hooks/use-toast";
 import React, { useState } from "react";
 import type { JobPosting } from "@/lib/types";
@@ -22,11 +21,33 @@ import { JobAlertSubscription } from "@/components/recruitment/job-alert-subscri
 
 // The vacancy prop here receives serializable data (dates as strings)
 export function VacancyClientPage({ vacancy: job }: { vacancy: JobPosting }) {
-  const { user, isUserLoading } = useUser();
+  const [isUserLoading, setIsUserLoading] = useState(true);
+  const [user, setUser] = useState<{ email: string } | null>(null);
   const { toast } = useToast();
   const router = useRouter();
   const [isApplying, setIsApplying] = useState(false);
   const category = getCourseCategories().find(c => c.name === job.category) || null;
+
+  React.useEffect(() => {
+    const fetchSession = async () => {
+      try {
+        const res = await fetch('/api/auth/session', { credentials: 'include' });
+        if (res.ok) {
+          const json = await res.json();
+          if (json?.ok && json?.user) {
+            setUser({ email: json.user.email });
+          } else {
+            setUser(null);
+          }
+        } else {
+          setUser(null);
+        }
+      } finally {
+        setIsUserLoading(false);
+      }
+    };
+    fetchSession();
+  }, []);
 
   const handleApply = async () => {
     if (!user) {

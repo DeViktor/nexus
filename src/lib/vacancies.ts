@@ -1,9 +1,7 @@
 import type { JobPosting } from './types';
-import { Timestamp } from 'firebase/firestore';
 
-function createTimestamp(dateString: string): Timestamp {
-    const date = new Date(dateString);
-    return new Timestamp(Math.floor(date.getTime() / 1000), 0);
+function createDate(dateString: string): Date {
+    return new Date(dateString);
 }
 
 export let vacancies: JobPosting[] = [
@@ -15,8 +13,8 @@ export let vacancies: JobPosting[] = [
         category: 'informatica-it',
         description: 'Estamos procurando um Desenvolvedor Frontend Sênior experiente para se juntar à nossa equipe. O candidato ideal tem forte conhecimento em React, Next.js e TypeScript.',
         recruiterId: '4FkPP1YFiBZh1Sw7ATyXpX0ZtII3',
-        postedDate: createTimestamp('2024-07-28T10:00:00Z'),
-        closingDate: createTimestamp('2024-08-28T23:59:59Z'),
+        postedDate: createDate('2024-07-28T10:00:00Z'),
+        closingDate: createDate('2024-08-28T23:59:59Z'),
         salaryRange: 'R$ 8.000 - R$ 12.000',
         showSalary: true,
         languages: ['Português', 'Inglês'],
@@ -41,8 +39,8 @@ export let vacancies: JobPosting[] = [
         category: 'rh-gestao',
         description: 'Buscamos um Analista de RH com experiência em todo o ciclo de recrutamento e seleção, endomarketing e gestão de benefícios. Forte habilidade de comunicação é essencial.',
         recruiterId: '4FkPP1YFiBZh1Sw7ATyXpX0ZtII3',
-        postedDate: createTimestamp('2024-07-27T14:30:00Z'),
-        closingDate: createTimestamp('2024-08-20T23:59:59Z'),
+        postedDate: createDate('2024-07-27T14:30:00Z'),
+        closingDate: createDate('2024-08-20T23:59:59Z'),
         salaryRange: 'A combinar',
         showSalary: false,
         languages: ['Português'],
@@ -72,8 +70,8 @@ export let vacancies: JobPosting[] = [
         category: 'informatica-it',
         description: 'Vaga para Gestor de Projetos de TI com experiência em metodologias ágeis (Scrum/Kanban) para coordenar equipes de desenvolvimento de software em projetos internacionais.',
         recruiterId: 'recruiter2', // Mock recruiter ID
-        postedDate: createTimestamp('2024-07-26T09:00:00Z'),
-        closingDate: createTimestamp('2024-09-01T23:59:59Z'),
+        postedDate: createDate('2024-07-26T09:00:00Z'),
+        closingDate: createDate('2024-09-01T23:59:59Z'),
         salaryRange: '€40.000 - €55.000 anuais',
         showSalary: true,
         languages: ['Português', 'Inglês (fluente)'],
@@ -98,7 +96,7 @@ export let vacancies: JobPosting[] = [
         category: 'minerios-petroleo',
         description: 'Oportunidade para recém-formados em Engenharia de Petróleo para atuar em projetos de exploração e produção. Requer disponibilidade para viagens.',
         recruiterId: 'recruiter2', // Mock recruiter ID
-        postedDate: createTimestamp('2024-07-25T18:00:00Z'),
+        postedDate: createDate('2024-07-25T18:00:00Z'),
         minExperience: '0-1 ano',
         minEducationLevel: 'Licenciatura',
         responsibilities: [
@@ -120,7 +118,7 @@ export let vacancies: JobPosting[] = [
         category: 'marketing-comercial',
         description: 'Procuramos um especialista em Marketing Digital para gerenciar nossas campanhas de SEO, SEM e redes sociais. Experiência com Google Analytics e Ads é um diferencial.',
         recruiterId: 'recruiter1', // Mock recruiter ID
-        postedDate: createTimestamp('2024-07-24T12:00:00Z'),
+        postedDate: createDate('2024-07-24T12:00:00Z'),
         salaryRange: 'A combinar',
         showSalary: false,
         minExperience: '3-5 anos',
@@ -143,7 +141,7 @@ export let vacancies: JobPosting[] = [
         category: 'financas-admin',
         description: 'Vaga para Auditor Financeiro Sênior com sólida experiência em auditoria externa, IFRS e análise de riscos financeiros. Certificação ACCA ou similar desejável.',
         recruiterId: 'recruiter2', // Mock recruiter ID
-        postedDate: createTimestamp('2024-07-23T11:00:00Z'),
+        postedDate: createDate('2024-07-23T11:00:00Z'),
         minExperience: '5+ anos',
         responsibilities: [
             'Planear e executar auditorias financeiras.',

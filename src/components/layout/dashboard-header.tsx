@@ -4,11 +4,9 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Logo } from '@/components/shared/logo';
 import { Menu, X, LogOut, Settings } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
 import { usePathname, useRouter } from 'next/navigation';
-import { useUser, useAuth, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
-import { signOut } from 'firebase/auth';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,7 +17,6 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Skeleton } from '../ui/skeleton';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
-import { doc } from 'firebase/firestore';
 import type { UserProfile } from '@/lib/types';
 
 const navLinks = [
@@ -31,22 +28,58 @@ const navLinks = [
 
 export function DashboardHeader() {
   const router = useRouter();
-  const { user, isUserLoading } = useUser();
-  const auth = useAuth();
-  const firestore = useFirestore();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const pathname = usePathname();
+  const [sessionUser, setSessionUser] = useState<any | null>(null);
+  const [isUserLoading, setIsUserLoading] = useState(true);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
 
-  const userDocRef = useMemoFirebase(() => {
-    if (!user || !firestore) return null;
-    return doc(firestore, `users/${user.uid}`);
-  }, [user, firestore]);
-    
-  const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userDocRef);
+  useEffect(() => {
+    let active = true;
+    const loadSession = async () => {
+      try {
+        const res = await fetch('/api/auth/session');
+        const json = await res.json();
+        if (!active) return;
+        if (json?.ok && json?.user) {
+          setSessionUser(json.user);
+          const name = json.user.displayName || '';
+          const [firstName, ...rest] = name.split(' ');
+          const lastName = rest.join(' ');
+          const role = (json.user.role || 'student') as UserProfile['userType'];
+          setUserProfile({
+            id: json.user.id,
+            firstName: firstName || name || 'Usuário',
+            lastName: lastName || '',
+            email: json.user.email,
+            userType: role,
+            profilePictureUrl: json.user.photoURL || undefined,
+            summary: undefined,
+            academicTitle: undefined,
+            cidade: undefined,
+            country: undefined,
+            phoneNumber: undefined,
+            company: undefined,
+          });
+        } else {
+          setSessionUser(null);
+          setUserProfile(null);
+        }
+      } catch {
+        setSessionUser(null);
+        setUserProfile(null);
+      } finally {
+        if (active) setIsUserLoading(false);
+      }
+    };
+    loadSession();
+    return () => { active = false; };
+  }, []);
 
   const handleLogout = async () => {
-    if (!auth) return;
-    await signOut(auth);
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+    } catch {}
     router.push('/');
   };
 
@@ -58,16 +91,16 @@ export function DashboardHeader() {
   }
 
   const getSettingsLink = () => {
-    if (!userProfile) return '/dashboard/student/profile'; // Default fallback
+    if (!userProfile) return '/dashboard/student/profile';
     switch (userProfile.userType) {
       case 'recruiter':
         return '/dashboard/recruiter/company-profile';
       case 'student':
         return '/dashboard/student/profile';
       case 'instructor':
-        return '/dashboard/instructor'; // Or a specific instructor profile page
+        return '/dashboard/instructor';
       case 'admin':
-        return '/dashboard/settings'; // Admin has site-wide settings
+        return '/dashboard/settings';
       default:
         return '/dashboard';
     }
@@ -101,17 +134,17 @@ export function DashboardHeader() {
 
           <div className="flex items-center space-x-2">
 
-            {isUserLoading || isProfileLoading ? (
+            {isUserLoading ? (
               <Skeleton className="h-9 w-24" />
-            ) : user ? (
+            ) : sessionUser ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="gap-2">
                      <Avatar className="h-8 w-8">
-                      <AvatarImage src={user.photoURL || undefined} />
-                      <AvatarFallback>{getInitials(user.displayName)}</AvatarFallback>
+                      <AvatarImage src={sessionUser.photoURL || undefined} />
+                      <AvatarFallback>{getInitials(sessionUser.displayName)}</AvatarFallback>
                     </Avatar>
-                    <span className='hidden sm:inline'>{user.displayName || user.email}</span>
+                    <span className='hidden sm:inline'>{sessionUser.displayName || sessionUser.email}</span>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
@@ -169,9 +202,9 @@ export function DashboardHeader() {
                         </Link>
                     ))}
                    <div className="pt-4 border-t">
-                    {user ? (
+                    {sessionUser ? (
                        <div className="space-y-2 px-3">
-                         <p className="font-medium">{user.displayName || user.email}</p>
+                         <p className="font-medium">{sessionUser.displayName || sessionUser.email}</p>
                          <Button variant="outline" className="w-full" asChild><Link href="/dashboard">Painel</Link></Button>
                          <Button variant="destructive" className="w-full" onClick={handleLogout}>Sair</Button>
                        </div>

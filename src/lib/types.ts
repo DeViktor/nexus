@@ -1,5 +1,3 @@
-import type { Timestamp } from 'firebase/firestore';
-
 export interface ModuleQuestion {
   question: string;
   type: 'multiple-choice' | 'short-answer';
@@ -61,8 +59,8 @@ export interface Course {
     category: string;
     description: string;
     recruiterId: string;
-    postedDate: Timestamp | Date; // Allow Date for mock data
-    closingDate?: Timestamp | Date;
+  postedDate: Date;
+  closingDate?: Date;
     responsibilities: string[];
     requirements: string[];
     aiScreeningQuestions?: string[];
@@ -86,7 +84,7 @@ export interface Course {
     id: string;
     userId: string;
     jobPostingId: string;
-    applicationDate: Timestamp | Date; // Allow Date for mock data
+  applicationDate: Date;
     status: ApplicationStatus;
     notes?: string;
   }

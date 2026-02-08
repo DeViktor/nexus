@@ -6,7 +6,6 @@ import { Footer } from '@/components/layout/footer';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Download, Save, Edit, Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useUser } from '@/firebase';
 import { users, updateUser } from '@/lib/users';
 import { useEffect, useState, useRef } from 'react';
 import { useForm, useFieldArray, SubmitHandler } from 'react-hook-form';
@@ -57,7 +56,8 @@ type CvTemplate = 'europass' | 'modern' | 'classic';
 
 export default function CVBuilderPage() {
   const router = useRouter();
-  const { user, isUserLoading } = useUser();
+  const [user, setUser] = useState<any | null>(null);
+  const [isUserLoading, setIsUserLoading] = useState(true);
   const { toast } = useToast();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -81,22 +81,35 @@ export default function CVBuilderPage() {
   const watchedData = form.watch();
 
   useEffect(() => {
-    if (!isUserLoading) {
-      if (user) {
-        const userProfile = users.find(u => u.id === user.uid);
-        if (userProfile) {
-          setProfile(userProfile);
-          form.reset({
-            ...userProfile,
-            profilePictureUrl: userProfile.profilePictureUrl || user?.photoURL || '',
-            skills: userProfile.skills?.map(s => ({ value: s }))
-          });
+    let active = true;
+    const loadSession = async () => {
+      try {
+        const res = await fetch('/api/auth/session');
+        const json = await res.json();
+        if (!active) return;
+        if (json?.ok && json?.user) {
+          setUser(json.user);
+          const userProfile = users.find(u => u.id === json.user.id);
+          if (userProfile) {
+            setProfile(userProfile);
+            form.reset({
+              ...userProfile,
+              profilePictureUrl: userProfile.profilePictureUrl || json.user.photoURL || '',
+              skills: userProfile.skills?.map(s => ({ value: s }))
+            });
+          }
+        } else {
+          router.push('/login');
         }
-      } else {
+      } catch {
         router.push('/login');
+      } finally {
+        if (active) setIsUserLoading(false);
       }
-    }
-  }, [user, isUserLoading, form, router]);
+    };
+    loadSession();
+    return () => { active = false; };
+  }, [form, router]);
 
   const handleSave: SubmitHandler<CvFormValues> = async (data) => {
     if (!profile) return;

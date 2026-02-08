@@ -8,7 +8,6 @@ import { Progress } from "@/components/ui/progress";
 import { CourseRecommendations } from "@/components/dashboard/course-recommendations";
 import { CertificateGenerator } from "@/components/student/certificate-generator";
 import { WishlistCourses } from "@/components/student/wishlist-courses";
-import { useUser } from "@/firebase";
 import { users } from "@/lib/users";
 import { getJobs } from "@/lib/vacancy-service";
 import type { JobPosting, UserProfile } from "@/lib/types";
@@ -66,15 +65,37 @@ const JobRecommendations = ({ userProfile }: { userProfile: UserProfile | null }
 
 
 export default function StudentDashboardPage() {
-    const { user, isUserLoading } = useUser();
+    const [user, setUser] = useState<any | null>(null);
+    const [isUserLoading, setIsUserLoading] = useState(true);
     const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
 
     useEffect(() => {
-        if (user) {
-            const profile = users.find(u => u.id === user.uid);
-            setUserProfile(profile || null);
-        }
-    }, [user]);
+        let active = true;
+        const loadSession = async () => {
+            try {
+                const res = await fetch('/api/auth/session');
+                const json = await res.json();
+                if (!active) return;
+                if (json?.ok && json?.user) {
+                    setUser(json.user);
+                    const profile = users.find(u => u.id === json.user.id);
+                    setUserProfile(profile || null);
+                } else {
+                    setUser(null);
+                    setUserProfile(null);
+                }
+            } catch {
+                if (active) {
+                    setUser(null);
+                    setUserProfile(null);
+                }
+            } finally {
+                if (active) setIsUserLoading(false);
+            }
+        };
+        loadSession();
+        return () => { active = false; };
+    }, []);
     
     // Mock data for enrolled courses
     const enrolledCourses = [

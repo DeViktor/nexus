@@ -1,67 +1,70 @@
 
 'use client';
-import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import Loading from './loading';
-import { doc } from 'firebase/firestore';
-import type { UserProfile } from '@/lib/types';
 
 export default function DashboardRedirectPage() {
-    const { user, isUserLoading } = useUser();
     const router = useRouter();
-    const firestore = useFirestore();
-
-    const userDocRef = useMemoFirebase(() => {
-        if (!user || !firestore) return null;
-        return doc(firestore, `users/${user.uid}`);
-    }, [user, firestore]);
-    
-    const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userDocRef);
+    const [isLoading, setIsLoading] = useState(true);
+    const [user, setUser] = useState<{ email: string; role?: string } | null>(null);
 
     useEffect(() => {
-        // Wait until both user and profile loading is complete
-        if (isUserLoading || isProfileLoading) {
+        const bootstrap = async () => {
+            try {
+                const res = await fetch('/api/auth/session', { credentials: 'include' });
+                if (!res.ok) {
+                    router.replace('/login');
+                    return;
+                }
+                const json = await res.json();
+                if (json?.ok && json?.user) {
+                    setUser({ email: json.user.email, role: json.user.role });
+                } else {
+                    router.replace('/login');
+                    return;
+                }
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        bootstrap();
+    }, [router]);
+
+    useEffect(() => {
+        if (isLoading) {
             return;
         }
 
-        // If not logged in after loading, redirect to login
         if (!user) {
             router.replace('/login');
             return;
         }
 
-        // Special override for admin user
         if (user.email === 'admin@nexustalent.com') {
             router.replace('/dashboard/admin');
             return;
         }
         
-        // Special override for recruiter test user
         if (user.email === 'recruiter@nexustalent.com.br') {
             router.replace('/dashboard/recruiter');
             return;
         }
 
-        // Special override for instructor test user
         if (user.email === 'formador@nexustalent.com.br') {
             router.replace('/dashboard/instructor');
             return;
         }
 
-        // Redirect based on the role from the Firestore profile
-        const role = userProfile?.userType;
+        const role = user.role;
 
         if (role) {
             router.replace(`/dashboard/${role}`);
         } else {
-            // Fallback to student dashboard if profile/role is somehow missing after loading
-            console.warn("User profile or userType not found, defaulting to student dashboard.");
             router.replace('/dashboard/student');
         }
 
-    }, [user, isUserLoading, userProfile, isProfileLoading, router, firestore]);
+    }, [user, isLoading, router]);
 
-    // Display a loading screen while authentication and profile fetching are in progress.
     return <Loading />;
 }

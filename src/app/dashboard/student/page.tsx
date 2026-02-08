@@ -8,7 +8,6 @@ import { Progress } from "@/components/ui/progress";
 import { CourseRecommendations } from "@/components/dashboard/course-recommendations";
 import { CertificateGenerator } from "@/components/student/certificate-generator";
 import { WishlistCourses } from "@/components/student/wishlist-courses";
-import { useUser } from "@/firebase";
 import { supabase } from "@/lib/supabase/client";
 import { getVacancies } from "@/lib/supabase/vacancy-service";
 import type { JobPosting, UserProfile } from "@/lib/types";
@@ -100,13 +99,36 @@ const JobRecommendations = ({ userProfile }: { userProfile: UserProfile | null }
 
 
 export default function StudentDashboardPage() {
-    const { user, isUserLoading } = useUser();
+    const [user, setUser] = useState<any | null>(null);
+    const [isUserLoading, setIsUserLoading] = useState(true);
     const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
 
     useEffect(() => {
+        let active = true;
+        const loadSession = async () => {
+            try {
+                const res = await fetch('/api/auth/session');
+                const json = await res.json();
+                if (!active) return;
+                if (json?.ok && json?.user) {
+                    setUser(json.user);
+                } else {
+                    setUser(null);
+                }
+            } catch {
+                if (active) setUser(null);
+            } finally {
+                if (active) setIsUserLoading(false);
+            }
+        };
+        loadSession();
+        return () => { active = false; };
+    }, []);
+
+    useEffect(() => {
         const fetchProfile = async () => {
-            if (user?.uid) {
-                const { data } = await supabase.from('users').select('*').eq('id', user.uid).single();
+            if (user?.id) {
+                const { data } = await supabase.from('users').select('*').eq('id', user.id).single();
                 if (data) {
                     const fullName: string = data.name || '';
                     const [firstName, ...rest] = fullName.split(' ');

@@ -11,9 +11,6 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Input } from "@/components/ui/input";
 import { Logo } from "@/components/shared/logo";
 import Link from "next/link";
-import { useAuth, useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
-import { createUserWithEmailAndPassword, updateProfile, GoogleAuthProvider, signInWithPopup, UserCredential } from 'firebase/auth';
-import { setDoc, doc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
@@ -22,15 +19,9 @@ import { Footer } from '@/components/layout/footer';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { UserProfile } from '@/lib/types';
 import { Separator } from '@/components/ui/separator';
+import { supabase } from '@/lib/supabase/client';
 
-const GoogleIcon = () => (
-  <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
-    <path fill="#4285F4" d="M22.56,12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26,1.37-.97,2.53-2.09,3.31v2.77h3.57c2.08-1.92,3.28-4.74,3.28-8.09Z"/>
-    <path fill="#34A853" d="M12,23c2.97,0,5.46-.98,7.28-2.66l-3.57-2.77c-.98,.66-2.23,1.06-3.71,1.06-2.86,0-5.29-1.93-6.16-4.53H2.18v2.84C3.99,20.53,7.7,23,12,23Z"/>
-    <path fill="#FBBC05" d="M5.84,14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43,.35-2.09V7.07H2.18C1.43,8.55,1,10.22,1,12s.43,3.45,1.18,4.93l3.66-2.84Z"/>
-    <path fill="#EA4335" d="M12,5.16c1.58,0,2.99,.54,4.1,1.62l3.15-3.15C17.46,1.99,14.97,1,12,1,7.7,1,3.99,3.47,2.18,7.07l3.66,2.84C6.71,7.09,9.14,5.16,12,5.16Z"/>
-  </svg>
-);
+const GoogleIcon = () => null;
 
 
 const formSchema = z.object({
@@ -67,8 +58,6 @@ export default function SignupPage() {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const router = useRouter();
-  const auth = useAuth();
-  const firestore = useFirestore();
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -85,71 +74,53 @@ export default function SignupPage() {
 
   const selectedRole = form.watch('userType');
 
-  const createFirestoreUser = (userCredential: UserCredential, userType: 'student' | 'instructor' | 'recruiter', additionalData?: Partial<UserProfile>) => {
-    if (!firestore) return;
-    const user = userCredential.user;
-    const [firstName, ...lastNameParts] = user.displayName?.split(' ') || [additionalData?.firstName || '', ''];
-    
-    const userDocRef = doc(firestore, 'users', user.uid);
-    
-    const profileData: UserProfile = {
-      id: user.uid,
-      email: user.email!,
-      firstName: firstName,
-      lastName: lastNameParts.join(' '),
-      userType: userType,
-      ...additionalData,
-    };
-    
-    // Explicitly add photoURL only if it exists to avoid 'undefined'
-    if (user.photoURL) {
-        profileData.profilePictureUrl = user.photoURL;
-    }
-
-    setDoc(userDocRef, profileData)
-        .then(() => {
-          toast({
-            title: 'Conta criada com sucesso!',
-            description: `Bem-vindo(a)! Você já pode fazer o login.`,
-          });
-          router.push('/login');
-        })
-        .catch((error) => {
-            const permissionError = new FirestorePermissionError({
-                path: userDocRef.path,
-                operation: 'create',
-                requestResourceData: profileData
-            });
-            errorEmitter.emit('permission-error', permissionError);
-            setIsLoading(false);
-        });
+  const createSupabaseUserRow = async (userId: string, email: string, userType: 'student' | 'instructor' | 'recruiter', additionalData?: Partial<UserProfile>) => {
+    const fullName = `${additionalData?.firstName || ''} ${additionalData?.lastName || ''}`.trim();
+    await supabase.from('users').upsert({
+      id: userId,
+      email,
+      name: fullName || email,
+      role: userType,
+      company: userType === 'recruiter' ? additionalData?.company : undefined,
+      academic_title: userType === 'instructor' ? additionalData?.academicTitle : undefined,
+      created_at: new Date().toISOString(),
+    });
   };
 
   const handleSignup: SubmitHandler<FormValues> = async (data) => {
     setIsLoading(true);
-    if (!firestore || !auth) {
-        toast({
-            variant: "destructive",
-            title: "Erro de Configuração",
-            description: "Os serviços da Firebase não estão disponíveis.",
-        });
-        setIsLoading(false);
-        return;
-    }
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
-      await updateProfile(userCredential.user, { displayName: `${data.firstName} ${data.lastName}` });
-      createFirestoreUser(userCredential, data.userType, {
-        firstName: data.firstName,
-        lastName: data.lastName,
-        academicTitle: data.userType === 'instructor' ? data.specialization : undefined,
+      const { data: signUpData, error } = await supabase.auth.signUp({
+        email: data.email,
+        password: data.password,
+        options: {
+          data: {
+            name: `${data.firstName} ${data.lastName}`,
+            role: data.userType,
+          },
+        },
       });
+      if (error) throw error;
+      const userId = signUpData.user?.id;
+      if (userId) {
+        await createSupabaseUserRow(userId, data.email, data.userType, {
+          firstName: data.firstName,
+          lastName: data.lastName,
+          academicTitle: data.userType === 'instructor' ? data.specialization : undefined,
+          company: data.userType === 'recruiter' ? data.companyName : undefined,
+        });
+      }
+      toast({
+        title: 'Conta criada com sucesso!',
+        description: 'Verifique seu e-mail para confirmar a conta e faça login.',
+      });
+      router.push('/login');
 
     } catch (error: any) {
         console.error("Signup Error (Auth):", error);
         let description = 'Ocorreu um erro. Tente novamente.';
-        if (error.code === 'auth/email-already-in-use') {
-            description = 'Este endereço de e-mail já está a ser utilizado por outra conta.';
+        if (String(error?.message || '').toLowerCase().includes('already')) {
+          description = 'Este endereço de e-mail já está a ser utilizado por outra conta.';
         }
         toast({
             variant: 'destructive',
@@ -173,13 +144,18 @@ export default function SignupPage() {
     }
 
     setIsLoading(true);
-    const provider = new GoogleAuthProvider();
     try {
-        const userCredential = await signInWithPopup(auth, provider);
-        createFirestoreUser(userCredential, userType, {
-            // Os nomes são obtidos do perfil Google, mas podemos passar os dados do formulário como fallback
-            academicTitle: userType === 'instructor' ? form.getValues('specialization') : undefined,
+        const { error } = await supabase.auth.signInWithOAuth({
+          provider: 'google',
+          options: {
+            redirectTo: window.location.origin + '/login',
+            queryParams: {
+              access_type: 'offline',
+              prompt: 'consent',
+            },
+          },
         });
+        if (error) throw error;
     } catch (error: any) {
         console.error("Google Sign-Up Error:", error);
         toast({
