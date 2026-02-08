@@ -5,7 +5,6 @@ import * as z from 'zod';
 import { useEffect, useState, useRef } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Wand2, PlusCircle, Trash2, Edit, User, Briefcase, GraduationCap, Award, Link as LinkIcon, FileText, Download, ArrowLeft, Save, KeyRound, Camera } from 'lucide-react';
-import { Loader2, Wand2, PlusCircle, Trash2, Edit, User, Briefcase, GraduationCap, Award, Link as LinkIcon, FileText, Download, ArrowLeft, Save, KeyRound, Camera } from 'lucide-react';
 import type { UserProfile } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
