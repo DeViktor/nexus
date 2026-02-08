@@ -8,7 +8,6 @@ import { Menu, X, LogOut, Globe, ChevronDown } from 'lucide-react';
 import { useEffect, useState, useTransition, type FC } from 'react';
 import { cn } from '@/lib/utils';
 import { usePathname, useRouter } from 'next/navigation';
-import { useUser, useAuth } from '@/firebase/provider';
 import {
   DropdownMenu,
   DropdownMenuContent,

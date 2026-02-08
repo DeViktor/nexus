@@ -14,7 +14,7 @@ import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import React from "react";
 import type { Course } from "@/lib/types";
-import { useUser } from "@/firebase";
+import { supabase } from "@/lib/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
 export function CourseDetailClientPage({ course }: { course: Course }) {
@@ -26,12 +26,17 @@ export function CourseDetailClientPage({ course }: { course: Course }) {
   
   const imageSrc = course.imageDataUri || image?.imageUrl;
 
-  const { user } = useUser();
+  const [isLoggedIn, setIsLoggedIn] = React.useState(false);
+  React.useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      setIsLoggedIn(!!data.user);
+    });
+  }, []);
   const router = useRouter();
   const { toast } = useToast();
 
   const handleEnroll = () => {
-    if (!user) {
+    if (!isLoggedIn) {
       toast({
         variant: "destructive",
         title: "Acesso Negado",

@@ -14,8 +14,8 @@ import { useToast } from "@/hooks/use-toast";
 import { getSiteData, updateSiteData } from "@/app/actions";
 import type { SiteData, ImagePlaceholder } from "@/lib/site-data";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
-import { doc } from 'firebase/firestore';
+import { supabase } from '@/lib/supabase/client';
+import { getUserById, mapUserRowToUserProfile, type UserRow } from '@/lib/supabase/user-service';
 import type { UserProfile } from '@/lib/types';
 
 
@@ -111,37 +111,43 @@ export default function SettingsPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  const { user, isUserLoading } = useUser();
-  const firestore = useFirestore();
-
-  const userDocRef = useMemoFirebase(() => {
-    if (!user || !firestore) return null;
-    return doc(firestore, `users/${user.uid}`);
-  }, [user, firestore]);
-    
-  const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userDocRef);
+  const [authUser, setAuthUser] = useState<{ id: string; email: string } | null>(null);
+  const [isUserLoading, setIsUserLoading] = useState(true);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
 
   useEffect(() => {
-    const userIsLoading = isUserLoading || isProfileLoading;
-    if (!userIsLoading) {
-      if (!user || userProfile?.userType !== 'admin') {
-        router.replace('/dashboard');
-        return;
-      }
-      
-      async function loadData() {
-          try {
-              const data = await getSiteData();
-              setSiteData(data);
-          } catch (error) {
-              toast({ variant: 'destructive', title: 'Erro ao carregar dados', description: 'Não foi possível carregar as configurações do site.'});
-          } finally {
-              setIsLoading(false);
+    const bootstrap = async () => {
+      try {
+        const { data } = await supabase.auth.getUser();
+        const u = data.user;
+        if (!u) {
+          router.replace('/dashboard');
+          return;
+        }
+        setAuthUser({ id: u.id, email: u.email || '' });
+        const row = await getUserById(u.id);
+        if (row) {
+          const profile = mapUserRowToUserProfile(row as UserRow);
+          setUserProfile(profile);
+          if (profile.userType !== 'admin') {
+            router.replace('/dashboard');
+            return;
           }
+        } else {
+          router.replace('/dashboard');
+          return;
+        }
+        const dataSite = await getSiteData();
+        setSiteData(dataSite);
+      } catch (error) {
+        toast({ variant: 'destructive', title: 'Erro ao carregar dados', description: 'Não foi possível carregar as configurações do site.'});
+      } finally {
+        setIsLoading(false);
+        setIsUserLoading(false);
       }
-      loadData();
-    }
-  }, [user, userProfile, isUserLoading, isProfileLoading, router, toast]);
+    };
+    bootstrap();
+  }, [router, toast]);
   
 
   const handleFormSubmit: SubmitHandler<FormValues> = async (data) => {
@@ -175,7 +181,7 @@ export default function SettingsPage() {
       setSiteData(newSiteData);
   }
 
-  if (isLoading || isUserLoading || isProfileLoading) {
+  if (isLoading || isUserLoading) {
     return (
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
             <div className="space-y-8">

@@ -9,7 +9,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { useUser } from '@/firebase';
+import { supabase } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import {
   Tooltip,
@@ -25,7 +25,7 @@ import { getApplicationsByVacancy, type Application } from '@/lib/supabase/appli
 const VACANCIES_PER_PAGE = 10;
 
 export default function RecruiterVacanciesPage() {
-  const { user } = useUser();
+  const [authUserId, setAuthUserId] = useState<string | null>(null);
   const { toast } = useToast();
   const router = useRouter();
 
@@ -36,12 +36,15 @@ export default function RecruiterVacanciesPage() {
   const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      setAuthUserId(data.user?.id || null);
+    });
     async function fetchData() {
-      if (user) {
+      if (authUserId) {
         try {
           setIsLoading(true);
           // Buscar vagas do recrutador do Supabase (incluindo expiradas)
-          const userJobs = await getRecruiterVacancies(user.uid, true);
+          const userJobs = await getRecruiterVacancies(authUserId, true);
 
           // Fallback: se não houver vagas associadas ao recrutador, mostrar todas as vagas
           let jobsToUse = userJobs;
@@ -74,7 +77,7 @@ export default function RecruiterVacanciesPage() {
     }
     
     fetchData();
-  }, [user]);
+  }, [authUserId]);
 
   const handleDelete = async (vacancyId: string) => {
     if (!confirm('Tem a certeza que deseja excluir esta vaga? Esta ação não pode ser desfeita.')) return;
@@ -83,8 +86,8 @@ export default function RecruiterVacanciesPage() {
       await deleteVacancy(vacancyId);
       
       // Atualizar a lista de vagas após a exclusão
-      if (user) {
-        const updatedJobs = await getRecruiterVacancies(user.uid, true);
+      if (authUserId) {
+        const updatedJobs = await getRecruiterVacancies(authUserId, true);
         setVacancies(updatedJobs);
       }
       

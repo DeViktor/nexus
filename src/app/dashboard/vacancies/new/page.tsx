@@ -16,7 +16,7 @@ import { useToast } from '@/hooks/use-toast';
 import { generateVacancyContentAction } from '@/app/actions';
 import type { GenerateVacancyContentOutput } from '@/ai/flows/generate-vacancy-content';
 import { useRouter } from 'next/navigation';
-import { useUser } from '@/firebase';
+import { supabase } from '@/lib/supabase/client';
 import { Switch } from '@/components/ui/switch';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
@@ -62,7 +62,12 @@ export default function NewVacancyPage() {
   const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
   const router = useRouter();
-  const { user } = useUser();
+  const [authUserId, setAuthUserId] = useState<string | null>(null);
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      setAuthUserId(data.user?.id || null);
+    });
+  }, []);
   const courseCategories = getCourseCategories();
 
 
@@ -121,7 +126,7 @@ export default function NewVacancyPage() {
       return;
     }
 
-    if (!user) {
+    if (!authUserId) {
         toast({ variant: "destructive", title: "Erro", description: "Utilizador recrutador não encontrado." });
         return;
     }
@@ -133,7 +138,7 @@ export default function NewVacancyPage() {
         ...formValues,
         minEducationLevel: formValues.minEducationLevel as EducationLevel | undefined,
         ...generatedContent,
-        recruiterId: user.uid,
+        recruiterId: authUserId,
         languages: formValues.languages?.split(',').map(l => l.trim()).filter(l => l) || [],
     };
 

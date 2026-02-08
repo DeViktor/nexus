@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Briefcase, Users, FileText, PlusCircle, MessageSquare, ClipboardCheck, BarChart, TrendingUp, CheckCircle, Building, UserPlus } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { useUser } from "@/firebase";
+import { supabase } from "@/lib/supabase/client";
 import { getJobs } from "@/lib/vacancy-service";
 import type { JobPosting } from "@/lib/types";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -62,7 +62,12 @@ function JobPostingList({ recruiterId }: { recruiterId: string }) {
 
 
 export default function RecruiterDashboardPage() {
-    const { user } = useUser();
+    const [userId, setUserId] = useState<string | null>(null);
+    useEffect(() => {
+        supabase.auth.getUser().then(({ data }) => {
+            setUserId(data.user?.id || null);
+        });
+    }, []);
 
     return (
         <div>
@@ -146,7 +151,7 @@ export default function RecruiterDashboardPage() {
                         <CardDescription>Crie novos empregos e gerencie os existentes.</CardDescription>
                     </CardHeader>
                     <CardContent>
-                         {user && <JobPostingList recruiterId={user.uid} />}
+                         {userId && <JobPostingList recruiterId={userId} />}
                         <div className="flex flex-wrap gap-2">
                             <Button asChild>
                                 <Link href="/dashboard/recruiter/vacancies/new">

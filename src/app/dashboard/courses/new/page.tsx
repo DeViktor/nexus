@@ -18,7 +18,7 @@ import { addCourseAction, generateCourseContentAction, generateModuleAssessmentA
 import Image from 'next/image';
 import type { Course } from '@/lib/types';
 import { useRouter } from 'next/navigation';
-import { useUser } from '@/firebase';
+import { supabase } from '@/lib/supabase/client';
 import {
   Dialog,
   DialogContent,
@@ -87,7 +87,12 @@ export default function NewCoursePage() {
   const [showGeneratedContent, setShowGeneratedContent] = useState(false);
   const { toast } = useToast();
   const router = useRouter();
-  const {user} = useUser();
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      setIsLoggedIn(!!data.user);
+    });
+  }, []);
   const courseCategories = getCourseCategories();
 
 
@@ -186,7 +191,7 @@ export default function NewCoursePage() {
 
 
   const handleSaveCourse: SubmitHandler<FormValues> = async (data) => {
-    if (!user) return;
+    if (!isLoggedIn) return;
     setIsSaving(true);
     
     if (!data.id) {

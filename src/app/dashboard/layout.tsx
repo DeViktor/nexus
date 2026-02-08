@@ -1,6 +1,5 @@
 import { SidebarProvider, Sidebar, SidebarTrigger, SidebarContent, SidebarHeader, SidebarInset } from "@/components/ui/sidebar";
 import { DashboardHeader } from "@/components/layout/dashboard-header";
-import { FirebaseClientProvider } from "@/firebase/client-provider";
 
 export default function DashboardLayout({
     children,
@@ -8,7 +7,6 @@ export default function DashboardLayout({
     children: React.ReactNode;
 }) {
     return (
-        <FirebaseClientProvider>
             <div className="min-h-screen flex flex-col">
                 <DashboardHeader />
                 <SidebarProvider>
@@ -27,6 +25,5 @@ export default function DashboardLayout({
                     </SidebarInset>
                 </SidebarProvider>
             </div>
-        </FirebaseClientProvider>
     );
 }

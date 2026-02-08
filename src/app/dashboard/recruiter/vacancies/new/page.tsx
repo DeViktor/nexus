@@ -16,7 +16,7 @@ import { useToast } from '@/hooks/use-toast';
 //import { generateVacancyContentAction } from '@/app/actions';
 //import type { GenerateVacancyContentOutput } from '@/ai/flows/generate-vacancy-content';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useUser } from '@/firebase';
+import { supabase } from '@/lib/supabase/client';
 import { Switch } from '@/components/ui/switch';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
@@ -70,7 +70,12 @@ export default function NewVacancyPage() {
   const { toast } = useToast();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user } = useUser();
+  const [authUserId, setAuthUserId] = useState<string | null>(null);
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      setAuthUserId(data.user?.id || null);
+    });
+  }, []);
   const courseCategories = getCourseCategories();
 
 

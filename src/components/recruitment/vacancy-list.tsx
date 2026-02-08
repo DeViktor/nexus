@@ -17,18 +17,14 @@ import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
 import Link from 'next/link';
 import type { JobPosting, CourseCategory } from '@/lib/types';
-import { Timestamp } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { JobAlertSubscription } from './job-alert-subscription';
 import { useJobWishlist } from '@/hooks/use-job-wishlist';
 
 
-const toDate = (date: Timestamp | Date | undefined): Date | null => {
+const toDate = (date: Date | undefined): Date | null => {
     if (!date) return null;
-    if (date instanceof Timestamp) {
-        return date.toDate();
-    }
     return date;
 }
 

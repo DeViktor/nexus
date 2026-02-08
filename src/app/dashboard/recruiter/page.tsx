@@ -5,7 +5,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Briefcase, Users, FileText, PlusCircle, MessageSquare, ClipboardCheck, BarChart, TrendingUp, CheckCircle, Building, UserPlus } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { useUser } from "@/firebase";
 // import { getVacancies } from "@/lib/vacancy-service";
 import type { Vacancy } from "@/lib/types";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -63,7 +62,7 @@ function VacancyList({ recruiterId }: { recruiterId: string }) {
 
 
 export default function RecruiterDashboardPage() {
-    const { user } = useUser();
+    // Sessão Supabase usada nos fluxos de navegação; o ID do utilizador é obtido nas páginas de vagas
 
     return (
         <div>
@@ -147,7 +146,6 @@ export default function RecruiterDashboardPage() {
                         <CardDescription>Crie novas vagas e gerencie as existentes.</CardDescription>
                     </CardHeader>
                     <CardContent>
-                         
                         <div className="flex flex-wrap gap-2">
                             <Button asChild>
                                 <Link href="/dashboard/recruiter/vacancies/new">

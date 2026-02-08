@@ -7,7 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { getCourseById } from '@/lib/course-service';
 import type { Course } from '@/lib/types';
-import { useUser } from '@/firebase';
+import { supabase } from '@/lib/supabase/client';
 import { users as mockUsers } from '@/lib/users';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -75,7 +75,8 @@ export default function EnrollPage() {
   const params = useParams();
   const router = useRouter();
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
-  const { user, isUserLoading } = useUser();
+  const [authUser, setAuthUser] = useState<{ id: string; email?: string; user_metadata?: any } | null>(null);
+  const [isUserLoading, setIsUserLoading] = useState(true);
   
   const [course, setCourse] = useState<Course | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -99,6 +100,14 @@ export default function EnrollPage() {
   }, [id]);
 
   useEffect(() => {
+    // bootstrap user
+    supabase.auth.getUser().then(({ data }) => {
+      setAuthUser(data.user ? { id: data.user.id, email: data.user.email || '', user_metadata: data.user.user_metadata } : null);
+      setIsUserLoading(false);
+    });
+  }, []);
+
+  useEffect(() => {
     if (!isUserLoading) {
       try {
         const storedData = localStorage.getItem(ENROLLMENT_STORAGE_KEY);
@@ -108,11 +117,12 @@ export default function EnrollPage() {
             dataToSet = JSON.parse(storedData);
         }
 
-        // Prioritize Firebase user profile data for core fields
-        if (user) {
+        // Prioritize Supabase user profile data for core fields
+        if (authUser) {
             const mockUserProfile = mockUsers.find(u => u.id === 'student1'); 
-            dataToSet.fullName = user.displayName || dataToSet.fullName || '';
-            dataToSet.email = user.email || dataToSet.email || '';
+            const fullName = (authUser.user_metadata?.name as string) || '';
+            dataToSet.fullName = fullName || dataToSet.fullName || '';
+            dataToSet.email = authUser.email || dataToSet.email || '';
             dataToSet.phone = mockUserProfile?.phoneNumber || dataToSet.phone || '';
             dataToSet.nationality = mockUserProfile?.nationality || dataToSet.nationality || '';
             dataToSet.profession = mockUserProfile?.academicTitle || dataToSet.profession || '';
@@ -123,7 +133,7 @@ export default function EnrollPage() {
         console.error("Failed to load or parse enrollment data:", error);
       }
     }
-  }, [user, isUserLoading, form]);
+  }, [authUser, isUserLoading, form]);
 
 
   const onSubmit: SubmitHandler<EnrollmentFormValues> = (data) => {
@@ -153,7 +163,7 @@ export default function EnrollPage() {
   if (!course) {
     return notFound();
   }
-   if (!user) {
+   if (!authUser) {
     router.push(`/login?redirect=/courses/${id}/enroll`);
     return null;
   }

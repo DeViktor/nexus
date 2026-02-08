@@ -20,8 +20,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/firebase';
-import { sendPasswordResetEmail } from 'firebase/auth';
+import { supabase } from '@/lib/supabase/client';
 import Papa from 'papaparse';
 
 
@@ -57,7 +56,6 @@ const roleVariantMap: Record<UserProfile['userType'], 'default' | 'secondary' | 
 export default function ManageUsersPage() {
     const router = useRouter();
     const { toast } = useToast();
-    const auth = useAuth();
     const [users, setUsers] = useState<UserProfile[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [isFormOpen, setIsFormOpen] = useState(false);
@@ -137,10 +135,11 @@ export default function ManageUsersPage() {
 
     const handlePasswordResetEmail = async (email: string) => {
         try {
-            await sendPasswordResetEmail(auth, email);
+            const { error } = await supabase.auth.resetPasswordForEmail(email);
+            if (error) throw error;
             toast({ title: "Instruções Enviadas", description: `Um email de redefinição de senha foi enviado para ${email}.`});
         } catch (error: any) {
-            toast({ variant: "destructive", title: "Erro", description: error.message || "Não foi possível enviar o email." });
+            toast({ variant: "destructive", title: "Erro", description: error?.message || "Não foi possível enviar o email." });
         }
     }
 

@@ -14,7 +14,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { useUser } from "@/firebase";
+import { supabase } from "@/lib/supabase/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { users as mockAllUsers } from '@/lib/users';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -65,14 +65,19 @@ const mockStudents = mockAllUsers.slice(0, 5).map((user, index) => ({
 function CoursePlayerPage({ course }: { course: Course }) {
   const [activeModule, setActiveModule] = useState<CourseModule | null>(course.modules[0] || null);
   const [activeTopic, setActiveTopic] = useState<CourseTopic | null>(course.modules[0]?.topics[0] || null);
-  const { user } = useUser();
+  const [authUser, setAuthUser] = useState<{ id: string; email?: string; user_metadata?: any } | null>(null);
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      setAuthUser(data.user ? { id: data.user.id, email: data.user.email || '', user_metadata: data.user.user_metadata } : null);
+    });
+  }, []);
   const { toast } = useToast();
   const [students, setStudents] = useState(mockStudents);
   const [selectedStudent, setSelectedStudent] = useState<UserProfile | null>(null);
   const [isGradeDialogOpen, setIsGradeDialogOpen] = useState(false);
   const [isMessageDialogOpen, setIsMessageDialogOpen] = useState(false);
 
-  const journalKey = `journal_instructor_${user?.uid}_${course.id}`;
+  const journalKey = `journal_instructor_${authUser?.id || 'anon'}_${course.id}`;
   const [journalNotes, setJournalNotes] = useLocalStorage(journalKey, '');
   
   const handleTopicClick = (module: CourseModule, topic: CourseTopic) => {
@@ -297,8 +302,8 @@ function CoursePlayerPage({ course }: { course: Course }) {
                             <CardContent className="space-y-4">
                                 <div className="flex gap-3">
                                   <Avatar>
-                                    <AvatarImage src={user?.photoURL || ''} />
-                                    <AvatarFallback>{user?.displayName?.[0]}</AvatarFallback>
+                            <AvatarImage src={''} />
+                            <AvatarFallback>{(authUser?.user_metadata?.name as string)?.[0] || '?'}</AvatarFallback>
                                   </Avatar>
                                   <Textarea placeholder="Comece uma nova discussão ou coloque uma dúvida..." />
                                 </div>

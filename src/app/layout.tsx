@@ -2,7 +2,6 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { cn } from '@/lib/utils';
 import { Toaster } from "@/components/ui/toaster"
-import { FirebaseClientProvider } from '@/firebase/client-provider';
 import { WishlistProvider } from '@/hooks/use-wishlist.tsx';
 import { JobWishlistProvider } from '@/hooks/use-job-wishlist';
 import { SupabaseProvider } from '@/lib/supabase/provider';
@@ -29,7 +28,6 @@ export default async function RootLayout({
         />
       </head>
       <body className={cn('font-body antialiased bg-background min-h-screen flex flex-col')}>
-        <FirebaseClientProvider>
           <SupabaseProvider>
             <WishlistProvider>
               <JobWishlistProvider>
@@ -39,7 +37,6 @@ export default async function RootLayout({
               </JobWishlistProvider>
             </WishlistProvider>
           </SupabaseProvider>
-        </FirebaseClientProvider>
       </body>
     </html>
   );
