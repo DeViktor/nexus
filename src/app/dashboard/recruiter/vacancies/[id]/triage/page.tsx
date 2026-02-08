@@ -171,7 +171,7 @@ export default function TriagePage() {
                  <div className="flex gap-2">
                     {candidates.some(c => c.score !== undefined) && (
                         <Button variant="outline" onClick={handleSelectOver50}>
-                            <Check className="mr-2 h-4 w-4" /> Selecionar > 50%
+                            <Check className="mr-2 h-4 w-4" /> Selecionar &gt; 50%
                         </Button>
                     )}
                     <Button onClick={handleAnalyzeAll} disabled={isAnalyzing}>
