@@ -4,32 +4,30 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Briefcase, FileWarning, PlusCircle, ArrowLeft, FileDown } from 'lucide-react';
-import type { Vacancy } from '@/lib/types';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
-import { getVacancies, deleteVacancy } from '@/lib/vacancy-service';
-import { getVacancies, deleteVacancy } from '@/lib/vacancy-service';
+import { getVacancies, deleteVacancy, type Vacancy as VacancyRow } from '@/lib/supabase/vacancy-service';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { GeneralReport } from "@/components/admin/general-report";
 
 export default function ManageVacanciesPage() {
   const { toast } = useToast();
   const router = useRouter();
-  const [vacancies, setVacancies] = useState<Vacancy[]>([]);
+  const [vacancies, setVacancies] = useState<VacancyRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const [reportData, setReportData] = useState<any>(null);
 
   useEffect(() => {
-    try {
     const fetchVacancies = async () => {
       setIsLoading(true);
       try {
         const allVacancies = await getVacancies(true);
-        setVacancies(allVacancies);
+        setVacancies(allVacancies || []);
       } catch (e) {
         if (e instanceof Error) {
           setError(e);
@@ -41,18 +39,18 @@ export default function ManageVacanciesPage() {
       }
     };
     fetchVacancies();
+  }, []);
 
   const handleDelete = async (vacancyId: string) => {
     if (!confirm('Tem a certeza que deseja excluir esta vaga? Esta ação não pode ser desfeita.')) return;
 
     try {
-        deleteVacancy(vacancyId);
         await deleteVacancy(vacancyId);
+        setVacancies(prev => prev.filter(v => String(v.id) !== String(vacancyId)));
         toast({
             title: 'Vaga Excluída!',
             description: 'A vaga foi removida com sucesso.',
         });
-    } catch (e) {
     } catch (e) {
         console.error(e);
         toast({
@@ -145,7 +143,7 @@ export default function ManageVacanciesPage() {
                                 <CardTitle>{vacancy.title}</CardTitle>
                                 <CardDescription>{vacancy.location} &middot; {vacancy.category}</CardDescription>
                             </div>
-                            <Badge>{vacancy.type}</Badge>
+                            <Badge>{((vacancy.job_type || '').toLowerCase().includes('part')) ? 'Part-time' : ((vacancy.job_type || '').toLowerCase().includes('remote')) ? 'Remote' : 'Full-time'}</Badge>
                         </div>
                     </CardHeader>
                     <CardContent>
@@ -203,5 +201,3 @@ export default function ManageVacanciesPage() {
     </div>
   );
 }
-
-    
