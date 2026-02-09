@@ -20,7 +20,6 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/lib/supabase/client';
 import Papa from 'papaparse';
 
 
@@ -85,6 +84,38 @@ export default function ManageUsersPage() {
         }
     }, [selectedUser, userForm]);
 
+    useEffect(() => {
+        const fetchUsers = async () => {
+            try {
+                const { data, error } = await supabase.from('users').select('*');
+                if (error) throw error;
+                const mapped: UserProfile[] = (data || []).map(row => {
+                    const fullName = row.name || '';
+                    const [firstName, ...rest] = fullName.split(' ');
+                    const lastName = rest.join(' ');
+                    const role = (row.role || 'student') as UserProfile['userType'];
+                    return {
+                        id: row.id,
+                        firstName: firstName || fullName || 'Usuário',
+                        lastName: lastName || '',
+                        email: row.email,
+                        userType: role,
+                        phoneNumber: undefined,
+                        profilePictureUrl: row.avatar_url,
+                        summary: row.bio,
+                        academicTitle: undefined,
+                        cidade: undefined,
+                        country: undefined,
+                        company: row.company,
+                    } satisfies UserProfile;
+                });
+                setUsers(mapped);
+            } catch (e) {
+                setUsers([]);
+            }
+        };
+        fetchUsers();
+    }, []);
 
     const filteredUsers = useMemo(() => {
         if (!searchTerm) return users;
@@ -335,36 +366,3 @@ export default function ManageUsersPage() {
         </div>
     );
 }
-    useEffect(() => {
-        const fetchUsers = async () => {
-            try {
-                const { data, error } = await supabase.from('users').select('*');
-                if (error) throw error;
-                const mapped: UserProfile[] = (data || []).map(row => {
-                    const fullName = row.name || '';
-                    const [firstName, ...rest] = fullName.split(' ');
-                    const lastName = rest.join(' ');
-                    const role = (row.role || 'student') as UserProfile['userType'];
-                    return {
-                        id: row.id,
-                        firstName: firstName || fullName || 'Usuário',
-                        lastName: lastName || '',
-                        email: row.email,
-                        userType: role,
-                        phoneNumber: undefined,
-                        profilePictureUrl: row.avatar_url,
-                        summary: row.bio,
-                        academicTitle: undefined,
-                        cidade: undefined,
-                        country: undefined,
-                        company: row.company,
-                    } satisfies UserProfile;
-                });
-                setUsers(mapped);
-            } catch (e) {
-                // Em caso de erro, mantém lista vazia para não usar mocks
-                setUsers([]);
-            }
-        };
-        fetchUsers();
-    }, []);
