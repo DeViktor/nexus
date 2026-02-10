@@ -5,7 +5,7 @@
 import { getCourseById } from "@/lib/course-service";
 import { notFound, useParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, BookOpen, Clock, Users, CheckCircle, Target, List, Video, FileText, Bot, Notebook, Save, Download, MessageSquare, VideoIcon, Calendar, Link as LinkIcon, FileUp, Presentation, Library, Inbox, Settings, ListChecks, Mail, Award } from "lucide-react";
+import { ArrowLeft, BookOpen, Clock, Users, CheckCircle, Target, List, Video, FileText, Bot, Notebook, Save, Download, MessageSquare, VideoIcon, Calendar, Link as LinkIcon, FileUp, Presentation, Library, Inbox, Settings, ListChecks, Mail, Award, MoreHorizontal } from "lucide-react";
 import Link from "next/link";
 import React, { useState, useEffect, useCallback } from "react";
 import type { Course, CourseModule, CourseTopic, UserProfile } from "@/lib/types";
@@ -19,7 +19,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { users as mockAllUsers } from '@/lib/users';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -407,8 +406,10 @@ export default function CourseDetailPage() {
 
   useEffect(() => {
     if (id) {
-        const foundCourse = getCourseById(id);
+      (async () => {
+        const foundCourse = await getCourseById(id);
         setCourse(foundCourse);
+      })();
     }
   }, [id]);
 

@@ -4,12 +4,11 @@ import { useParams, notFound, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { type JobPosting, type UserProfile } from "@/lib/types";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Loader2, Sparkles, Check } from "lucide-react";
+import { ArrowLeft, Loader2, Sparkles, Check, Users } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { analyzeResumeAction } from "@/app/actions";
 import { RecruiterApplicationCard } from "@/components/recruitment/recruiter-application-card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Users } from "lucide-react";
 import { getVacancy } from "@/lib/supabase/vacancy-service";
 import { getApplicationsByVacancy } from "@/lib/supabase/application-service";
 
