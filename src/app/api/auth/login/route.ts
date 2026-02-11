@@ -22,58 +22,27 @@ export async function POST(req: Request) {
 
     const supabase = createClient(url, anon, { auth: { persistSession: false, autoRefreshToken: false } });
     const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({ email: email.toLowerCase(), password });
-    let authUserId: string | null = null;
-    let authEmail: string | null = null;
-    if (!signInError && signInData?.user) {
-      authUserId = signInData.user.id;
-      authEmail = signInData.user.email ?? email.toLowerCase();
-    } else {
-      const admin = getServerSupabase();
-      const { data: userRow } = await admin
-        .schema('auth')
-        .from('users')
-        .select('id,email,encrypted_password,role')
-        .eq('email', email.toLowerCase())
-        .limit(1);
-      const row = Array.isArray(userRow) ? userRow[0] : null;
-      const hash = row?.encrypted_password as string | undefined;
-      let ok = false;
-      if (hash) {
-        try {
-          ok = await bcrypt.compare(password, hash);
-        } catch {}
-        if (!ok) {
-          try {
-            ok = await argon2.verify(hash, password);
-          } catch {}
-        }
-      }
-      if (!row || !ok) {
-        const message = signInError?.message || 'Credenciais inválidas';
-        return NextResponse.json({ ok: false, error: message }, { status: 401 });
-      }
-      authUserId = String(row.id);
-      authEmail = String(row.email);
+    
+    if (signInError || !signInData?.user) {
+      const message = signInError?.message || 'Credenciais inválidas';
+      return NextResponse.json({ ok: false, error: message }, { status: 401 });
     }
+    
+    const authUserId = signInData.user.id;
+    const authEmail = signInData.user.email ?? email.toLowerCase();
 
     const admin = getServerSupabase();
     let role: string | undefined = undefined;
-    const { data: profileById, error: byIdError } = await admin
-      .schema('auth')
+    
+    // Buscar role da tabela public.users em vez do schema auth
+    const { data: userData, error: userError } = await admin
       .from('users')
-      .select('id,email,role,user_metadata,raw_user_meta_data')
-      .eq('id', authUserId as string)
+      .select('role')
+      .eq('id', authUserId)
       .limit(1);
-    if (byIdError) {
-      const { data: profileByEmail } = await admin
-        .schema('auth')
-        .from('users')
-        .select('id,email,role')
-        .eq('email', (authEmail ?? email).toLowerCase())
-        .limit(1);
-      role = profileByEmail?.[0]?.role as any;
-    } else if (profileById && profileById[0]) {
-      role = (profileById[0] as any)?.role as any;
+      
+    if (!userError && userData && userData[0]) {
+      role = userData[0].role || undefined;
     }
 
     const exp = Date.now() + 7 * 24 * 60 * 60 * 1000;
