@@ -3,7 +3,6 @@ import { getServerSupabase } from '@/lib/supabase/client';
 import { signSession } from '@/lib/auth/session';
 import { createClient } from '@supabase/supabase-js';
 import bcrypt from 'bcryptjs';
-import argon2 from 'argon2';
 
 export async function POST(req: Request) {
   try {
@@ -20,30 +19,33 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, error: 'Ambiente Supabase inválido' }, { status: 500 });
     }
 
-    const supabase = createClient(url, anon, { auth: { persistSession: false, autoRefreshToken: false } });
-    const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({ email: email.toLowerCase(), password });
-    
-    if (signInError || !signInData?.user) {
-      const message = signInError?.message || 'Credenciais inválidas';
-      return NextResponse.json({ ok: false, error: message }, { status: 401 });
-    }
-    
-    const authUserId = signInData.user.id;
-    const authEmail = signInData.user.email ?? email.toLowerCase();
-
     const admin = getServerSupabase();
-    let role: string | undefined = undefined;
     
-    // Buscar role da tabela public.users em vez do schema auth
+    // Buscar usuário na tabela public.users
     const { data: userData, error: userError } = await admin
       .from('users')
-      .select('role')
-      .eq('id', authUserId)
+      .select('id,email,password_hash,role')
+      .eq('email', email.toLowerCase())
       .limit(1);
       
-    if (!userError && userData && userData[0]) {
-      role = userData[0].role || undefined;
+    if (userError || !userData || userData.length === 0) {
+      return NextResponse.json({ ok: false, error: 'Credenciais inválidas' }, { status: 401 });
     }
+    
+    const user = userData[0];
+    
+    // Verificar senha com bcrypt
+    const isValidPassword = await bcrypt.compare(password, user.password_hash || '');
+    if (!isValidPassword) {
+      return NextResponse.json({ ok: false, error: 'Credenciais inválidas' }, { status: 401 });
+    }
+    
+    const authUserId = user.id;
+    const authEmail = user.email;
+    const userRole = user.role;
+
+    // Usar o role obtido diretamente do usuário
+    const role = userRole || undefined;
 
     const exp = Date.now() + 7 * 24 * 60 * 60 * 1000;
     const token = await signSession({ userId: authUserId as string, email: authEmail as string, role, exp });

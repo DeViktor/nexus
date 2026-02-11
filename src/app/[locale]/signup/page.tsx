@@ -18,6 +18,7 @@ import { Header } from '@/components/layout/header';
 import { Footer } from '@/components/layout/footer';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { UserProfile } from '@/lib/types';
+import bcrypt from 'bcryptjs';
 import { Separator } from '@/components/ui/separator';
 import { supabase } from '@/lib/supabase/client';
 
@@ -74,12 +75,15 @@ export default function SignupPage() {
 
   const selectedRole = form.watch('userType');
 
-  const createSupabaseUserRow = async (userId: string, email: string, userType: 'student' | 'instructor' | 'recruiter', additionalData?: Partial<UserProfile>) => {
+  const createSupabaseUserRow = async (userId: string, email: string, password: string, userType: 'student' | 'instructor' | 'recruiter', additionalData?: Partial<UserProfile>) => {
     const fullName = `${additionalData?.firstName || ''} ${additionalData?.lastName || ''}`.trim();
+    const passwordHash = await bcrypt.hash(password, 10);
+    
     await supabase.from('users').upsert({
       id: userId,
       email,
       name: fullName || email,
+      password_hash: passwordHash,
       role: userType,
       company: userType === 'recruiter' ? additionalData?.company : undefined,
       academic_title: userType === 'instructor' ? additionalData?.academicTitle : undefined,
@@ -103,7 +107,7 @@ export default function SignupPage() {
       if (error) throw error;
       const userId = signUpData.user?.id;
       if (userId) {
-        await createSupabaseUserRow(userId, data.email, data.userType, {
+        await createSupabaseUserRow(userId, data.email, data.password, data.userType, {
           firstName: data.firstName,
           lastName: data.lastName,
           academicTitle: data.userType === 'instructor' ? data.specialization : undefined,
